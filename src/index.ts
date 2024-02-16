@@ -19,6 +19,9 @@ let compiler: CoreCompiler.Compiler | undefined
 export const unpluginFactory: UnpluginFactory<Options | undefined> = () => ({
   name: 'unplugin-starter',
   enforce: 'pre',
+  /**
+   * This hook is called when the build starts. It is a good place to initialize
+   */
   async buildStart() {
     const nodeLogger = nodeApi.createNodeLogger({ process })
     // @ts-expect-error see https://github.com/ionic-team/stencil/pull/5375
@@ -41,9 +44,21 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = () => ({
     })
     compiler = await createCompiler(validated.config)
   },
+  /**
+   * `transformInclude` is called for every file that is being transformed.
+   * If it returns `true`, the file will be transformed.
+   * @param id path of the file
+   * @returns whether the file should be transformed
+   */
   transformInclude(id) {
-    return id.endsWith('main.ts') || id.endsWith('.tsx')
+    return id.endsWith('.tsx')
   },
+  /**
+   * This hook is called when a file is being transformed.
+   * @param code the source code of the file
+   * @param id path of the file
+   * @returns the transformed code
+   */
   async transform(code, id) {
     const staticImports = findStaticImports(code)
     const stencilImports = staticImports
@@ -63,6 +78,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = () => ({
     })
 
     let transformedCode = await compiler.sys.readFile(outputPath!).catch((err) => {
+      // eslint-disable-next-line no-console
       console.log('error', err)
       return 'class MyComponent extends HTMLElement {}'
     })

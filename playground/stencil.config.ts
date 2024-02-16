@@ -1,5 +1,4 @@
 import type { Config } from '@stencil/core'
-import { reactOutputTarget } from '@stencil/react-output-target'
 
 export const config: Config = {
   namespace: 'crypto',
@@ -7,9 +6,6 @@ export const config: Config = {
     {
       type: 'dist-custom-elements',
     },
-    // reactOutputTarget({
-    //   proxiesFile: './src/index.ts',
-    // }),
   ],
   testing: {
     browserHeadless: 'new',
