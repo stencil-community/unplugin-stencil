@@ -3,6 +3,7 @@
   "scripts": {
     "dev": "nodemon -w '../src/**/*.ts' -e .ts -x vite"
   },
+  "types": "./playground/src/components.d.ts",
   "devDependencies": {
     "vite": "^5.0.4",
     "vite-plugin-inspect": "^0.8.1"
