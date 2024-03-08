@@ -1,4 +1,14 @@
+import os from 'node:os'
+import fs from 'node:fs/promises'
+import path from 'node:path'
+import process from 'node:process'
+
+import type { Config as StencilConfig } from '@stencil/core'
 import type { ParsedStaticImport } from 'mlly'
+
+import type { Options } from './types.js'
+
+import { DEFAULT_STENCIL_CONFIG, STENCIL_BUILD_DIR } from './constants.js'
 
 /**
  * StencilJS does not import the `h` or `Fragment` function by default. We need to add it so the user
@@ -54,4 +64,39 @@ export function getCompilerOptions(ts: any, rootDir: string): CompilerOptions | 
 
   _tsCompilerOptions = parseResult.options
   return _tsCompilerOptions
+}
+
+/**
+ * compile root directory of the project
+ * @param options the options to use
+ * @returns the path to the created config file
+ */
+export function getRootDir(options: Options): string {
+  return options.rootPath || process.cwd()
+}
+
+/**
+ * create a temporary config file for StencilJS
+ * @param options the options to use
+ * @returns the path to the created config file
+ */
+export async function createStencilConfigFile(options: Options): Promise<string> {
+  const rootPath = getRootDir(options)
+  const namespace = path.basename(rootPath)
+  const stencilDir = path.resolve(rootPath, STENCIL_BUILD_DIR)
+  await fs.mkdir(stencilDir, { recursive: true })
+
+  const configFilePath = path.resolve(stencilDir, `${namespace}.stencil.config.ts`)
+  const config: StencilConfig = {
+    ...DEFAULT_STENCIL_CONFIG,
+    namespace,
+    ...options.stencilConfig,
+  }
+
+  const configCode = [
+    `import type { Config } from '@stencil/core'\n`,
+    `export const config: Config = ${JSON.stringify(config, null, 2)}`,
+  ].join('\n')
+  await fs.writeFile(configFilePath, configCode)
+  return configFilePath
 }
