@@ -4,10 +4,10 @@ on:
   workflow_dispatch:
     inputs:
       releaseType:
-        description: "Release type - major, minor or patch"
+        description: 'Release type - major, minor or patch'
         required: true
         type: choice
-        default: "patch"
+        default: patch
         options:
           - patch
           - minor
@@ -15,15 +15,15 @@ on:
       distTag:
         description: 'NPM tag (e.g. use "next" to release a test version)'
         required: true
-        default: 'latest'
+        default: latest
       preRelease:
-        description: If latest release was a pre-release (e.g. X.X.X-alpha.0) and you want to push another one, pick "yes"
+        description: If latest release was a pre-release (e.g. X.X.X-alpha.0) and you want to push another one, pick 'yes'
         required: true
         type: choice
-        default: "no"
+        default: no
         options:
-          - "yes"
-          - "no"
+          - yes
+          - no
 
 env:
   NPM_TOKEN: ${{ secrets.NPM_TOKEN }}
@@ -33,12 +33,12 @@ jobs:
   release:
     runs-on: ubuntu-latest
     permissions:
-        contents: write
-        id-token: write
+      contents: write
+      id-token: write
     steps:
       - uses: actions/checkout@v2
         with:
-          ref: 'main'
+          ref: main
           fetch-depth: 0
       - uses: actions/setup-node@v3
         with:
@@ -49,13 +49,13 @@ jobs:
         run: npm run build
       - name: NPM Setup
         run: |
-          npm set registry "https://registry.npmjs.org/"
+          npm set registry 'https://registry.npmjs.org/'
           npm set //registry.npmjs.org/:_authToken $NPM_TOKEN
           npm whoami
       - name: Git Setup
         run: |
-          git config --global user.email "git@bromann.dev"
-          git config --global user.name "Christian Bromann"
+          git config --global user.email 'git@bromann.dev'
+          git config --global user.name 'Christian Bromann'
       - name: Release
         run: npx release-it ${{github.event.inputs.releaseType}} --github.release --ci --npm.skipChecks --no-git.requireCleanWorkingDir --npm.tag=${{github.event.inputs.distTag}}
         env:
