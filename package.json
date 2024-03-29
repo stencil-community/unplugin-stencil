@@ -6,6 +6,7 @@
   "description": "An Unplugin that wraps Stencil compiler for Vite, Webpack, Rollup, and more",
   "license": "MIT",
   "homepage": "https://github.com/stencil-community/unplugin-stencil#readme",
+  "access": "public",
   "repository": {
     "type": "git",
     "url": "git+https://github.com/stencil-community/unplugin-stencil.git"
