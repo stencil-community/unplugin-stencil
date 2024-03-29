@@ -96,6 +96,7 @@
   "peerDependencies": {
     "@nuxt/kit": "^3",
     "@nuxt/schema": "^3",
+    "@stencil/core": "^4.0.0",
     "esbuild": "*",
     "rollup": "^3",
     "vite": ">=3",
@@ -119,10 +120,12 @@
     },
     "@nuxt/schema": {
       "optional": true
+    },
+    "@stencil/core": {
+      "optional": false
     }
   },
   "dependencies": {
-    "@stencil/core": "^4.12.2",
     "mlly": "^1.5.0",
     "unplugin": "^1.5.1"
   },

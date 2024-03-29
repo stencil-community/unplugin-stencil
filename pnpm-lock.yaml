@@ -9,7 +9,7 @@ importers:
   .:
     dependencies:
       '@stencil/core':
-        specifier: ^4.12.2
+        specifier: ^4.0.0
         version: 4.12.2
       esbuild:
         specifier: '*'
