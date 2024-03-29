@@ -1,3 +1,4 @@
+import path from 'node:path'
 import fs from 'node:fs/promises'
 import { describe, expect, it, vi } from 'vitest'
 
@@ -81,7 +82,7 @@ describe('createStencilConfigFile', () => {
   it('should create a config file', async () => {
     const options = { rootPath: '/test' }
     const configPath = await createStencilConfigFile(options)
-    expect(configPath).toBe('/test/.stencil/test.stencil.config.ts')
+    expect(configPath).toBe(path.resolve('test', '.stencil', 'test.stencil.config.ts'))
     expect(fs.mkdir).toHaveBeenCalledWith('/test/.stencil', { recursive: true })
     expect(fs.writeFile).toHaveBeenCalledWith(configPath, [
       'import type { Config } from \'@stencil/core\'\n',
