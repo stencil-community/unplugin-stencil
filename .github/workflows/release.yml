@@ -40,11 +40,11 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+      - uses: pnpm/action-setup@v3
       - uses: actions/setup-node@v4
         with:
           node-version-file: '.nvmrc'
           cache: 'pnpm'
-      - uses: pnpm/action-setup@v3
       - name: NPM Setup
         run: |
           npm set registry "https://registry.npmjs.org/"
