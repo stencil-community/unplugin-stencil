@@ -1,7 +1,7 @@
 {
   "name": "unplugin-stencil",
   "type": "module",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "packageManager": "pnpm@9.0.2",
   "description": "An Unplugin that wraps Stencil compiler for Vite, Webpack, Rollup, and more",
   "license": "MIT",
