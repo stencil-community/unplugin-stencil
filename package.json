@@ -104,18 +104,6 @@
     "webpack": "^4 || ^5"
   },
   "peerDependenciesMeta": {
-    "webpack": {
-      "optional": true
-    },
-    "rollup": {
-      "optional": true
-    },
-    "vite": {
-      "optional": true
-    },
-    "esbuild": {
-      "optional": true
-    },
     "@nuxt/kit": {
       "optional": true
     },
@@ -124,6 +112,18 @@
     },
     "@stencil/core": {
       "optional": false
+    },
+    "esbuild": {
+      "optional": true
+    },
+    "rollup": {
+      "optional": true
+    },
+    "vite": {
+      "optional": true
+    },
+    "webpack": {
+      "optional": true
     }
   },
   "dependencies": {
