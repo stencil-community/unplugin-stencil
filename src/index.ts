@@ -5,9 +5,8 @@ import type { UnpluginFactory } from 'unplugin'
 import { createUnplugin } from 'unplugin'
 import { findStaticImports, parseStaticImport } from 'mlly'
 
-import nodeApi from '@stencil/core/sys/node'
+import nodeApi from '@stencil/core/sys/node/index.js'
 import type * as CoreCompiler from '@stencil/core/compiler'
-
 import { createCompiler } from '@stencil/core/compiler/stencil.js'
 
 import { STENCIL_IMPORT } from './constants.js'
