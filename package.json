@@ -2,7 +2,7 @@
   "name": "unplugin-stencil",
   "type": "module",
   "version": "0.1.1",
-  "packageManager": "pnpm@9.0.2",
+  "packageManager": "pnpm@10.8.1",
   "description": "An Unplugin that wraps Stencil compiler for Vite, Webpack, Rollup, and more",
   "license": "MIT",
   "homepage": "https://github.com/stencil-community/unplugin-stencil#readme",
@@ -97,7 +97,7 @@
   "peerDependencies": {
     "@nuxt/kit": "^3",
     "@nuxt/schema": "^3",
-    "@stencil/core": "^4.0.0",
+    "@stencil/core": "^4.29.3",
     "esbuild": "*",
     "rollup": "^3",
     "vite": ">=3",
@@ -127,27 +127,27 @@
     }
   },
   "dependencies": {
-    "mlly": "^1.6.1",
-    "unplugin": "^1.10.1"
+    "mlly": "^1.7.4",
+    "unplugin": "^2.3.2"
   },
   "devDependencies": {
-    "@antfu/eslint-config": "^2.15.0",
-    "@nuxt/kit": "^3.11.2",
-    "@nuxt/schema": "^3.11.2",
-    "@types/node": "^20.12.7",
-    "bumpp": "^9.4.0",
-    "chalk": "^5.3.0",
-    "eslint": "^8.56.0",
-    "esno": "^4.7.0",
-    "fast-glob": "^3.3.2",
-    "nodemon": "^3.1.0",
-    "release-it": "^17.2.0",
-    "rimraf": "^5.0.5",
-    "rollup": "^4.14.3",
-    "tsup": "^8.0.2",
-    "typescript": "^5.4.5",
-    "vite": "^5.2.9",
-    "vitest": "^1.5.0",
-    "webpack": "^5.91.0"
+    "@antfu/eslint-config": "^4.12.0",
+    "@nuxt/kit": "^3.16.2",
+    "@nuxt/schema": "^3.16.2",
+    "@types/node": "^22.14.1",
+    "bumpp": "^10.1.0",
+    "chalk": "^5.4.1",
+    "eslint": "^9.24.0",
+    "esno": "^4.8.0",
+    "fast-glob": "^3.3.3",
+    "nodemon": "^3.1.9",
+    "release-it": "^18.1.2",
+    "rimraf": "^6.0.1",
+    "rollup": "^4.40.0",
+    "tsup": "^8.4.0",
+    "typescript": "^5.8.3",
+    "vite": "^6.2.6",
+    "vitest": "^3.1.1",
+    "webpack": "^5.99.5"
   }
 }

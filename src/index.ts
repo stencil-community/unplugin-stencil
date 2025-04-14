@@ -23,10 +23,8 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
    */
   async buildStart() {
     const configPath = await createStencilConfigFile(options)
-    const nodeLogger = nodeApi.createNodeLogger({ process })
-    // @ts-expect-error see https://github.com/ionic-team/stencil/pull/5375
+    const nodeLogger = nodeApi.createNodeLogger()
     const nodeSys = nodeApi.createNodeSys({ process, logger: nodeLogger })
-    // @ts-expect-error see https://github.com/ionic-team/stencil/pull/5375
     nodeApi.setupNodeProcess({ process, logger: nodeLogger })
     const coreCompiler = await nodeSys.dynamicImport!(nodeSys.getCompilerExecutingPath()) as { loadConfig: typeof CoreCompiler.loadConfig }
     const validated = await coreCompiler.loadConfig({
