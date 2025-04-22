@@ -1,5 +1,5 @@
 // eslint-disable-next-line unused-imports/no-unused-imports
-import { Component, Prop, h } from '@stencil/core'
+import { Component, h, Prop } from '@stencil/core'
 import { format } from '../../utils/utils.js'
 
 @Component({

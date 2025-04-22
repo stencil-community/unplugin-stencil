@@ -1,5 +1,5 @@
-import path from 'node:path'
 import fs from 'node:fs/promises'
+import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 
 import { createStencilConfigFile, getCompilerOptions, getRootDir, injectStencilImports } from '../src/utils'
