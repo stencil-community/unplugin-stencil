@@ -15,6 +15,14 @@ import { getRootDir, getStencilConfigFile } from './utils.js'
 
 let compiler: CoreCompiler.Compiler | undefined
 
+async function cleanup() {
+  await compiler?.destroy()
+  compiler = undefined
+  process.exit(1)
+}
+process.on('SIGTERM', cleanup)
+process.on('SIGINT', cleanup)
+
 export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = {}) => ({
   name: 'unplugin-stencil',
   enforce: 'pre',
@@ -45,14 +53,6 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
       sys: nodeSys,
     })
     compiler = await createCompiler(validated.config)
-
-    async function cleanup() {
-      await compiler?.destroy()
-      await nodeSys.destroy()
-      process.exit(1)
-    }
-
-    process.on('SIGTERM', cleanup)
   },
   /**
    * `transformInclude` is called for every file that is being transformed.
