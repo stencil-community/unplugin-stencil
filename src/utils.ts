@@ -1,11 +1,11 @@
-import fs from 'node:fs/promises'
-import path from 'node:path'
-import process from 'node:process'
-
 import type { Config as StencilConfig } from '@stencil/core'
 import type { ParsedStaticImport } from 'mlly'
-
 import type { Options } from './types.js'
+
+import fs from 'node:fs/promises'
+import path from 'node:path'
+
+import process from 'node:process'
 
 import { DEFAULT_STENCIL_CONFIG, STENCIL_BUILD_DIR } from './constants.js'
 
@@ -79,7 +79,16 @@ export function getRootDir(options: Options): string {
  * @param options the options to use
  * @returns the path to the created config file
  */
-export async function createStencilConfigFile(options: Options): Promise<string> {
+export async function getStencilConfigFile(options: Options): Promise<string> {
+  /**
+   * first check if a default config file exists
+   */
+  if (options.rootPath) {
+    const configFilePath = path.resolve(options.rootPath, 'stencil.config.ts')
+    if (await fs.stat(configFilePath).catch(() => false))
+      return configFilePath
+  }
+
   const rootPath = getRootDir(options)
   const namespace = path.basename(rootPath)
   const stencilDir = path.resolve(rootPath, STENCIL_BUILD_DIR)

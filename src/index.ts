@@ -1,17 +1,17 @@
+import type * as CoreCompiler from '@stencil/core/compiler'
+import type { UnpluginFactory } from 'unplugin'
+
+import type { Options } from './types.js'
 import path from 'node:path'
 import process from 'node:process'
 
-import type { UnpluginFactory } from 'unplugin'
-import { createUnplugin } from 'unplugin'
+import { createCompiler } from '@stencil/core/compiler/stencil.js'
+import nodeApi from '@stencil/core/sys/node/index.js'
 import { findStaticImports, parseStaticImport } from 'mlly'
 
-import nodeApi from '@stencil/core/sys/node/index.js'
-import type * as CoreCompiler from '@stencil/core/compiler'
-import { createCompiler } from '@stencil/core/compiler/stencil.js'
-
+import { createUnplugin } from 'unplugin'
 import { STENCIL_IMPORT } from './constants.js'
-import { createStencilConfigFile, getRootDir } from './utils.js'
-import type { Options } from './types.js'
+import { getRootDir, getStencilConfigFile } from './utils.js'
 
 let compiler: CoreCompiler.Compiler | undefined
 
@@ -22,7 +22,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
    * This hook is called when the build starts. It is a good place to initialize
    */
   async buildStart() {
-    const configPath = await createStencilConfigFile(options)
+    const configPath = await getStencilConfigFile(options)
     const nodeLogger = nodeApi.createNodeLogger()
     const nodeSys = nodeApi.createNodeSys({ process, logger: nodeLogger })
     nodeApi.setupNodeProcess({ process, logger: nodeLogger })
@@ -45,6 +45,14 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
       sys: nodeSys,
     })
     compiler = await createCompiler(validated.config)
+
+    async function cleanup() {
+      await compiler?.destroy()
+      await nodeSys.destroy()
+      process.exit(1)
+    }
+
+    process.on('SIGTERM', cleanup)
   },
   /**
    * `transformInclude` is called for every file that is being transformed.
@@ -82,7 +90,45 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
     if (!outputPath)
       throw new Error('Could not find the output file')
 
-    const transformedCode = await compiler.sys.readFile(outputPath)
+    let transformedCode = await compiler.sys.readFile(outputPath)
+
+    /**
+     * make relative imports absolute to Vite can pick up the correct path
+     */
+    const outputDir = path.dirname(outputPath)
+    const relativeImports = findStaticImports(transformedCode).filter(imp => imp.specifier.startsWith('./'))
+    for (const imp of relativeImports) {
+      /**
+       * replace relative import with absolute import, e.g. given `transformedCode` has
+       * a relative import such as:
+       *
+       * ```js
+       * import { f as format } from './utils.js';
+       * ```
+       *
+       * and given the value of `imp` is determined to be:
+       *
+       * ```
+       * {
+       *   type: 'static',
+       *   imports: '{ f as format } ',
+       *   specifier: './utils.js',
+       *   code: "import { f as format } from './utils.js';\n\n",
+       *   start: 84,
+       *   end: 127
+       * }
+       * ```
+       *
+       * the new import will be:
+       *
+       * ```js
+       * import { f as format } from '/path/to/project/dist/components/utils.js';
+       * ```
+       */
+      const newImport = imp.code.replace(imp.specifier, path.resolve(outputDir, imp.specifier))
+      transformedCode = transformedCode.replace(imp.code, newImport)
+    }
+
     return {
       code: transformedCode,
       inputFilePath: id,
