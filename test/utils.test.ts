@@ -1,8 +1,7 @@
-import fs from 'node:fs/promises'
 import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 
-import { createStencilConfigFile, getCompilerOptions, getRootDir, injectStencilImports } from '../src/utils'
+import { getCompilerOptions, getRootDir, injectStencilImports } from '../src/utils'
 
 const __dirname = path.dirname(new URL(import.meta.url).pathname)
 
@@ -77,28 +76,5 @@ describe('getRootDir', () => {
   it('should return the root path', () => {
     expect(getRootDir({ rootPath: '/test' })).toBe('/test')
     expect(getRootDir({})).toBe(process.cwd())
-  })
-})
-
-describe('createStencilConfigFile', () => {
-  it('should create a config file', async () => {
-    const options = { rootPath: '/test' }
-    const configPath = await createStencilConfigFile(options)
-    expect(configPath).toBe(path.resolve(path.join(path.sep, 'test', '.stencil', 'test.stencil.config.ts')))
-    expect(fs.mkdir).toHaveBeenCalledWith(path.resolve(path.join(path.sep, 'test', '.stencil')), { recursive: true })
-    expect(fs.writeFile).toHaveBeenCalledWith(configPath, [
-      'import type { Config } from \'@stencil/core\'\n',
-      'export const config: Config = {',
-      '  "watch": false,',
-      '  "outputTargets": [',
-      '    {',
-      '      \"type\": \"dist-custom-elements\",',
-      '      \"externalRuntime\": true,',
-      '      \"customElementsExportBehavior\": \"auto-define-custom-elements\"',
-      '    }',
-      '  ],',
-      '  "namespace": "test"',
-      '}',
-    ].join('\n'))
   })
 })
