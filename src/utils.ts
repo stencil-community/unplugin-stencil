@@ -108,3 +108,26 @@ export async function getStencilConfigFile(options: Options): Promise<string> {
   await fs.writeFile(configFilePath, configCode)
   return configFilePath
 }
+
+/**
+ * Parse the tag config from the code
+ * @param code the code to parse the tag config from
+ * @returns the tag config, or `undefined` if no tag config is found
+ */
+export function parseTagConfig(code: string): string | undefined {
+  const componentRegex = /@Component\(\s*(\{[\s\S]*?\})\s*\)/
+  const match = code.match(componentRegex)
+  const configStr = match?.[1]
+
+  if (!configStr) {
+    return
+  }
+
+  // Extract tag property
+  const tagMatch = configStr.match(/tag\s*:\s*['"`]([^'"`]+)['"`]/)
+  if (!tagMatch?.[1]) {
+    return
+  }
+
+  return tagMatch[1]
+}

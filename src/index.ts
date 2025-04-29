@@ -11,7 +11,7 @@ import { findStaticImports, parseStaticImport } from 'mlly'
 
 import { createUnplugin } from 'unplugin'
 import { STENCIL_IMPORT } from './constants.js'
-import { getRootDir, getStencilConfigFile } from './utils.js'
+import { getRootDir, getStencilConfigFile, parseTagConfig } from './utils.js'
 
 let compiler: CoreCompiler.Compiler | undefined
 
@@ -83,8 +83,12 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
       return { code }
 
     const result = await compiler.build()
+    const componentTag = parseTagConfig(code)
     const outputPath = result.outputs.find(o => o.type === 'dist-custom-elements')?.files.find((f) => {
-      return path.basename(f) === path.basename(id).replace('.tsx', '.js')
+      /**
+       * the output file name is the component tag
+       */
+      return componentTag && path.basename(f) === `${componentTag}.js`
     })
 
     if (!outputPath)

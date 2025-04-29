@@ -1,9 +1,6 @@
-import path from 'node:path'
 import { describe, expect, it, vi } from 'vitest'
 
-import { getCompilerOptions, getRootDir, injectStencilImports } from '../src/utils'
-
-const __dirname = path.dirname(new URL(import.meta.url).pathname)
+import { getCompilerOptions, getRootDir, injectStencilImports, parseTagConfig } from '../src/utils'
 
 vi.mock('node:fs/promises', () => ({
   default: {
@@ -76,5 +73,17 @@ describe('getRootDir', () => {
   it('should return the root path', () => {
     expect(getRootDir({ rootPath: '/test' })).toBe('/test')
     expect(getRootDir({})).toBe(process.cwd())
+  })
+})
+
+describe('parseTagConfig', () => {
+  it('should return the tag config', () => {
+    expect(parseTagConfig('@Component({ tag: "test" })')).toBe('test')
+    expect(parseTagConfig('@Component({ tag: \'test\' })')).toBe('test')
+    expect(parseTagConfig('@Component({tag:`test`, \n\nstyleUrl: "test.css"})')).toBe('test')
+  })
+
+  it('should return undefined if no tag config is found', () => {
+    expect(parseTagConfig('@Component({})')).toBe(undefined)
   })
 })
