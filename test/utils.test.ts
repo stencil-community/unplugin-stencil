@@ -88,7 +88,7 @@ describe('parseTagConfig', () => {
   })
 })
 
-const sourceCode = `import { B as Button, d as defineCustomElement$1 } from '/path/to/project/dist/components/button.js';
+const sourceCode = `import { B as Button, d as defineCustomElement$1 } from './components/button.js';
 
 import { f as format } from './utils.js';
 
@@ -101,7 +101,7 @@ export { defineCustomElement, IonButton }
 describe('transformCompiledCode', () => {
   it('should transform the compiled code', () => {
     expect(transformCompiledCode(sourceCode, '/foo/bar/loo/test.js')).toMatchInlineSnapshot(`
-      "import { B as Button, d as defineCustomElement$1 } from '/path/to/project/dist/components/button.js';
+      "import { B as Button, d as defineCustomElement$1 } from '/foo/bar/loo/components/button.js';
 
       import { f as format } from '/foo/bar/loo/utils.js';
 
@@ -110,7 +110,7 @@ describe('transformCompiledCode', () => {
 
       export { defineCustomElement, IonButton }
 
-      export { Button } from '/path/to/project/dist/components/button.js';
+      export { Button } from '/foo/bar/loo/components/button.js';
       "
     `)
   })

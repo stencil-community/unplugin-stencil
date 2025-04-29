@@ -133,6 +133,15 @@ export function parseTagConfig(code: string): string | undefined {
   return tagMatch[1]
 }
 
+/**
+ * transform the compiled code in amend the following:
+ * - make relative imports absolute
+ * - export the original component class
+ *
+ * @param code the code to transform
+ * @param outputPath the path to the where the compiler outputs dist-custom-elements
+ * @returns the transformed code
+ */
 export function transformCompiledCode(code: string, outputPath: string) {
   const staticImports = findStaticImports(code)
   const imports = staticImports.map(imp => parseStaticImport(imp))
@@ -240,7 +249,7 @@ export function transformCompiledCode(code: string, outputPath: string) {
      */
     const componentName = Object.values(componentImport?.namedImports || {})[0]
     if (componentImport) {
-      code += `\nexport { ${componentName} } from '${componentImport.specifier}';\n`
+      code += `\nexport { ${componentName} } from '${path.posix.resolve(outputDir, componentImport.specifier)}';\n`
     }
   }
 
