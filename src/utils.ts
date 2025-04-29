@@ -170,7 +170,7 @@ export function transformCompiledCode(code: string, outputPath: string) {
      * import { f as format } from '/path/to/project/dist/components/utils.js';
      * ```
      */
-    const newImport = imp.code.replace(imp.specifier, path.resolve(outputDir, imp.specifier))
+    const newImport = imp.code.replace(imp.specifier, path.posix.resolve(outputDir, imp.specifier))
     code = code.replace(imp.code, newImport)
   }
 
