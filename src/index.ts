@@ -1,11 +1,11 @@
 import type * as CoreCompiler from '@stencil/core/compiler'
-import type { UnpluginFactory } from 'unplugin'
+import type { OutputTargetDistCustomElements } from '@stencil/core/internal'
 
+import type { UnpluginFactory } from 'unplugin'
 import type { Options } from './types.js'
 import path from 'node:path'
-import process from 'node:process'
 
-import { OutputTargetDistCustomElements } from '@stencil/core/internal'
+import process from 'node:process'
 import { createCompiler } from '@stencil/core/compiler/stencil.js'
 import nodeApi from '@stencil/core/sys/node/index.js'
 import { findStaticImports, parseStaticImport } from 'mlly'
@@ -68,7 +68,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
 
       function onChange() {
         nodeLogger.info(`[unplugin-stencil] Compiling...`)
-        compilerPromise = new Promise((resolve) => compiler?.build().finally(() => resolve()))
+        compilerPromise = new Promise(resolve => compiler?.build().finally(() => resolve()))
       }
       watcher.on('fileAdd', onChange)
       watcher.on('fileDelete', onChange)
