@@ -12,3 +12,5 @@ export const DEFAULT_STENCIL_CONFIG: Config = {
     },
   ],
 }
+
+export const COMPONENT_CLASS_DEFINITION = '/*@__PURE__*/ proxyCustomElement(class '

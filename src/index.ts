@@ -11,7 +11,7 @@ import { findStaticImports, parseStaticImport } from 'mlly'
 
 import { createUnplugin } from 'unplugin'
 import { STENCIL_IMPORT } from './constants.js'
-import { getRootDir, getStencilConfigFile, parseTagConfig } from './utils.js'
+import { getRootDir, getStencilConfigFile, parseTagConfig, transformCompiledCode } from './utils.js'
 
 let compiler: CoreCompiler.Compiler | undefined
 
@@ -71,10 +71,10 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
    */
   async transform(code, id) {
     const staticImports = findStaticImports(code)
-    const stencilImports = staticImports
+    const imports = staticImports
       .filter(imp => imp.specifier === STENCIL_IMPORT)
       .map(imp => parseStaticImport(imp))
-    const isStencilComponent = stencilImports.some(imp => 'Component' in (imp.namedImports || {}))
+    const isStencilComponent = imports.some(imp => 'Component' in (imp.namedImports || {}))
 
     /**
      * if file doesn't define a Stencil component
@@ -94,44 +94,10 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
     if (!outputPath)
       throw new Error('Could not find the output file')
 
-    let transformedCode = await compiler.sys.readFile(outputPath)
-
-    /**
-     * make relative imports absolute to Vite can pick up the correct path
-     */
-    const outputDir = path.dirname(outputPath)
-    const relativeImports = findStaticImports(transformedCode).filter(imp => imp.specifier.startsWith('./'))
-    for (const imp of relativeImports) {
-      /**
-       * replace relative import with absolute import, e.g. given `transformedCode` has
-       * a relative import such as:
-       *
-       * ```js
-       * import { f as format } from './utils.js';
-       * ```
-       *
-       * and given the value of `imp` is determined to be:
-       *
-       * ```
-       * {
-       *   type: 'static',
-       *   imports: '{ f as format } ',
-       *   specifier: './utils.js',
-       *   code: "import { f as format } from './utils.js';\n\n",
-       *   start: 84,
-       *   end: 127
-       * }
-       * ```
-       *
-       * the new import will be:
-       *
-       * ```js
-       * import { f as format } from '/path/to/project/dist/components/utils.js';
-       * ```
-       */
-      const newImport = imp.code.replace(imp.specifier, path.resolve(outputDir, imp.specifier))
-      transformedCode = transformedCode.replace(imp.code, newImport)
-    }
+    const transformedCode = await transformCompiledCode(
+      await compiler.sys.readFile(outputPath),
+      outputPath,
+    )
 
     return {
       code: transformedCode,

@@ -1,6 +1,6 @@
 import { describe, expect, it, vi } from 'vitest'
 
-import { getCompilerOptions, getRootDir, injectStencilImports, parseTagConfig } from '../src/utils'
+import { getCompilerOptions, getRootDir, injectStencilImports, parseTagConfig, transformCompiledCode } from '../src/utils'
 
 vi.mock('node:fs/promises', () => ({
   default: {
@@ -85,5 +85,33 @@ describe('parseTagConfig', () => {
 
   it('should return undefined if no tag config is found', () => {
     expect(parseTagConfig('@Component({})')).toBe(undefined)
+  })
+})
+
+const sourceCode = `import { B as Button, d as defineCustomElement$1 } from '/path/to/project/dist/components/button.js';
+
+import { f as format } from './utils.js';
+
+const IonButton = Button
+const defineCustomElement = defineCustomElement$1
+
+export { defineCustomElement, IonButton }
+`
+
+describe('transformCompiledCode', () => {
+  it('should transform the compiled code', () => {
+    expect(transformCompiledCode(sourceCode, '/foo/bar/loo/test.js')).toMatchInlineSnapshot(`
+      "import { B as Button, d as defineCustomElement$1 } from '/path/to/project/dist/components/button.js';
+
+      import { f as format } from '/foo/bar/loo/utils.js';
+
+      const IonButton = Button
+      const defineCustomElement = defineCustomElement$1
+
+      export { defineCustomElement, IonButton }
+
+      export { Button } from '/path/to/project/dist/components/button.js';
+      "
+    `)
   })
 })

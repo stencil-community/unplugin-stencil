@@ -1,13 +1,14 @@
 import type { Config as StencilConfig } from '@stencil/core'
 import type { ParsedStaticImport } from 'mlly'
 import type { Options } from './types.js'
-
 import fs from 'node:fs/promises'
-import path from 'node:path'
 
+import path from 'node:path'
 import process from 'node:process'
 
-import { DEFAULT_STENCIL_CONFIG, STENCIL_BUILD_DIR } from './constants.js'
+import { findStaticImports, parseStaticImport } from 'mlly'
+
+import { COMPONENT_CLASS_DEFINITION, DEFAULT_STENCIL_CONFIG, STENCIL_BUILD_DIR } from './constants.js'
 
 /**
  * StencilJS does not import the `h` or `Fragment` function by default. We need to add it so the user
@@ -130,4 +131,118 @@ export function parseTagConfig(code: string): string | undefined {
   }
 
   return tagMatch[1]
+}
+
+export function transformCompiledCode(code: string, outputPath: string) {
+  const staticImports = findStaticImports(code)
+  const imports = staticImports.map(imp => parseStaticImport(imp))
+
+  /**
+   * make relative imports absolute to Vite can pick up the correct path
+   */
+  const outputDir = path.dirname(outputPath)
+  const relativeImports = findStaticImports(code).filter(imp => imp.specifier.startsWith('./'))
+  for (const imp of relativeImports) {
+    /**
+     * replace relative import with absolute import, e.g. given `transformedCode` has
+     * a relative import such as:
+     *
+     * ```js
+     * import { f as format } from './utils.js';
+     * ```
+     *
+     * and given the value of `imp` is determined to be:
+     *
+     * ```
+     * {
+     *   type: 'static',
+     *   imports: '{ f as format } ',
+     *   specifier: './utils.js',
+     *   code: "import { f as format } from './utils.js';\n\n",
+     *   start: 84,
+     *   end: 127
+     * }
+     * ```
+     *
+     * the new import will be:
+     *
+     * ```js
+     * import { f as format } from '/path/to/project/dist/components/utils.js';
+     * ```
+     */
+    const newImport = imp.code.replace(imp.specifier, path.resolve(outputDir, imp.specifier))
+    code = code.replace(imp.code, newImport)
+  }
+
+  /**
+   * Make sure the original component class export is preserved, e.g.
+   * given the component is defined within the file:
+   *
+   * ```ts
+   * import { proxyCustomElement, HTMLElement, h, Host } from '@stencil/core/internal/client';
+   * // ...
+   * const Accordion = \/*@__PURE__*\/ proxyCustomElement(class Accordion extends HTMLElement {
+   *   // ...
+   * }, [...]);
+   * // ...
+   * const IonAccordion = Accordion;
+   * const defineCustomElement = defineCustomElement$1;
+   * export { IonAccordion, defineCustomElement };
+   * ```
+   *
+   * then we have to export the original component class:
+   *
+   * ```ts
+   * import { proxyCustomElement, HTMLElement, h, Host } from '@stencil/core/internal/client';
+   * // ...
+   * export const Accordion = \/*@__PURE__*\/ proxyCustomElement(class Accordion extends HTMLElement {
+   *   // ...
+   * }, [...]);
+   * // ...
+   * const IonAccordion = Accordion;
+   * const defineCustomElement = defineCustomElement$1;
+   * export { IonAccordion, defineCustomElement };
+   * ```
+   */
+  if (code.includes(COMPONENT_CLASS_DEFINITION)) {
+    code = code.split('\n').map((l: string) => (
+      l.includes(COMPONENT_CLASS_DEFINITION) ? `export ${l}` : l
+    )).join('\n')
+  }
+  /**
+   * or if the component is defined outside of the file:
+   *
+   * ```ts
+   * import { B as Button, d as defineCustomElement$1 } from '/path/to/project/dist/components/button.js';
+   *
+   * const IonButton = Button;
+   * const defineCustomElement = defineCustomElement$1;
+   *
+   * export { IonButton, defineCustomElement };
+   * ```
+   *
+   * the new import will be:
+   *
+   * ```ts
+   * import { B as Button, d as defineCustomElement$1 } from '/path/to/project/dist/components/button.js';
+   *
+   * const IonButton = Button;
+   * const defineCustomElement = defineCustomElement$1;
+   *
+   * export { IonButton, defineCustomElement };
+   * export { Button } from '/path/to/project/dist/components/button.js'
+   * ```
+   */
+  else {
+    const componentImport = imports.find(imp => Object.values(imp.namedImports || {}).find((i: string) => i.startsWith('defineCustomElement')))
+    /**
+     * this assumes that the first named import is the component name
+     */
+    const componentName = Object.values(componentImport?.namedImports || {})[0]
+    if (componentImport) {
+      code += `\nexport { ${componentName} } from '${componentImport.specifier}';\n`
+    }
+  }
+
+  return code
 }
