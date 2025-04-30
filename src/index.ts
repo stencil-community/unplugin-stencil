@@ -97,7 +97,8 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
           if (exists) {
             return compiledPath
           }
-        } catch {
+        }
+        catch {
           return null
         }
       }
