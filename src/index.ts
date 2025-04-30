@@ -73,6 +73,11 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
       watcher.on('fileAdd', onChange)
       watcher.on('fileDelete', onChange)
       watcher.on('fileUpdate', onChange)
+
+      /**
+       * trigger compiler once on build start
+       */
+      onChange()
     },
     /**
      * `transformInclude` is called for every file that is being transformed.
