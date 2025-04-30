@@ -110,7 +110,7 @@ describe('transformCompiledCode', () => {
 
       export { defineCustomElement, IonButton }
 
-      export { Button } from '/foo/bar/loo/components/button.js';
+      export { B as Button } from '/foo/bar/loo/components/button.js';
       "
     `)
   })

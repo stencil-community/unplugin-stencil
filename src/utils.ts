@@ -247,9 +247,9 @@ export function transformCompiledCode(code: string, outputPath: string) {
     /**
      * this assumes that the first named import is the component name
      */
-    const componentName = Object.values(componentImport?.namedImports || {})[0]
-    if (componentImport) {
-      code += `\nexport { ${componentName} } from '${path.posix.resolve(outputDir, componentImport.specifier)}';\n`
+    const namedImport = Object.entries(componentImport?.namedImports || {})[0]
+    if (namedImport && componentImport) {
+      code += `\nexport { ${namedImport.join(' as ')} } from '${path.posix.resolve(outputDir, componentImport.specifier)}';\n`
     }
   }
 
