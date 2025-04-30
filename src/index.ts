@@ -83,6 +83,27 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
     transformInclude(id) {
       return id.endsWith('.tsx')
     },
+
+    /**
+     * try to resolve any dynamic imported file through the compiler output directory
+     * @param id the id to resolve
+     * @returns the resolved id or null if not found
+     */
+    resolveId(id) {
+      if (id.startsWith('.') && compiler && distCustomElementsOptions?.dir) {
+        const compiledPath = path.resolve(distCustomElementsOptions.dir, id)
+        try {
+          const exists = compiler.sys.accessSync(compiledPath)
+          if (exists) {
+            return compiledPath
+          }
+        } catch {
+          return null
+        }
+      }
+      return null
+    },
+
     /**
      * This hook is called when a file is being transformed.
      * @param code the source code of the file
