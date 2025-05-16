@@ -6,8 +6,8 @@ import type { Options } from './types.js'
 import path from 'node:path'
 
 import process from 'node:process'
-import { createCompiler } from '@stencil/core/compiler/stencil.js'
-import nodeApi from '@stencil/core/sys/node/index.js'
+import { createCompiler } from '@stencil/core/compiler'
+import nodeApi from '@stencil/core/sys/node'
 import { findStaticImports, parseStaticImport } from 'mlly'
 
 import { createUnplugin } from 'unplugin'
