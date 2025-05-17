@@ -134,6 +134,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
         await compilerPromise
       }
 
+      await compiler.build()
       const componentTag = parseTagConfig(code)
       const compilerFilePath = path.resolve(distCustomElementsOptions.dir, `${componentTag}.js`)
       const compilerFileExists = await compiler.sys.access(compilerFilePath)
