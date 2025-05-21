@@ -14,8 +14,12 @@ import { createUnplugin } from 'unplugin'
 import { STENCIL_IMPORT } from './constants.js'
 import { getRootDir, getStencilConfigFile, parseTagConfig, transformCompiledCode } from './utils.js'
 
-let compiler: CoreCompiler.Compiler | undefined
 const DCE_OUTPUT_TARGET_NAME = 'dist-custom-elements'
+const transformedCache = new Map<string, { version: number, code: string }>()
+
+let compiler: CoreCompiler.Compiler | undefined
+let compilerPromise: Promise<void> | undefined
+let latestRequestedVersion = 0
 
 async function cleanup() {
   await compiler?.destroy()
@@ -25,10 +29,64 @@ async function cleanup() {
 process.on('SIGTERM', cleanup)
 process.on('SIGINT', cleanup)
 
+/**
+ * Queue a build so that:
+ *   1. Only one build runs at a time
+ *   2. Rapid successive calls collapse into a single build
+ *
+ */
+function queueBuild() {
+  latestRequestedVersion++
+  compilerPromise = (compilerPromise ?? Promise.resolve()).then(async () => {
+    await compiler?.build()
+    transformedCache.clear()
+  })
+  return compilerPromise
+}
+
+/**
+ * Ensure that the compiled dist file is at least as new as the corresponding source file before we read it.
+ *
+ * @param srcPath Absolute path to the component’s **source** file (`.tsx`).
+ * @param distPath Absolute path to the compiled **dist** file (`dist-custom-elements/<tag>.js`).
+ */
+async function ensureFreshBuild(srcPath: string, distPath: string) {
+  try {
+    const [srcStats, distStats] = await Promise.all([
+      compiler?.sys.stat(srcPath),
+      compiler?.sys.stat(distPath),
+    ])
+
+    if (
+      distStats?.mtimeMs
+      && srcStats?.mtimeMs
+      && distStats.mtimeMs >= srcStats.mtimeMs
+    ) {
+      return
+    }
+  }
+  catch {}
+
+  await queueBuild()
+  await waitForLatestBuild()
+}
+
+/**
+ * Waits until the most recent Stencil build chain has completed
+ */
+async function waitForLatestBuild(): Promise<void> {
+  while (true) {
+    const pending = compilerPromise
+    if (pending)
+      await pending
+    if (compilerPromise === pending)
+      return
+  }
+}
+
 export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = {}) => {
   const nodeLogger = nodeApi.createNodeLogger()
   let distCustomElementsOptions: OutputTargetDistCustomElements | undefined
-  let compilerPromise: Promise<void> | undefined
 
   return {
     name: 'unplugin-stencil',
@@ -127,25 +185,25 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
        * if file doesn't define a Stencil component
        */
       if (!compiler || !distCustomElementsOptions || !distCustomElementsOptions.dir || (!isStencilComponent && !id.endsWith('.css')))
-        return { code }
+        return
 
-      if (compilerPromise) {
-        nodeLogger.info(`[unplugin-stencil] Waiting for compiler to finish...`)
-        await compilerPromise
-      }
-
-      await compiler.build()
       const componentTag = parseTagConfig(code)
       const compilerFilePath = path.resolve(distCustomElementsOptions.dir, `${componentTag}.js`)
-      const compilerFileExists = await compiler.sys.access(compilerFilePath)
 
-      if (!compilerFileExists)
+      await ensureFreshBuild(id, compilerFilePath)
+
+      await waitForLatestBuild()
+
+      const exists = await compiler.sys.access(compilerFilePath)
+      if (!exists)
         throw new Error('Could not find the output file')
 
+      const raw = await compiler!.sys.readFile(compilerFilePath)
       const transformedCode = await transformCompiledCode(
-        await compiler.sys.readFile(compilerFilePath),
+        raw,
         compilerFilePath,
       )
+      transformedCache.set(id, { version: latestRequestedVersion, code: transformedCode })
 
       return {
         code: transformedCode,
