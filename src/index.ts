@@ -11,15 +11,14 @@ import nodeApi from '@stencil/core/sys/node'
 import { findStaticImports, parseStaticImport } from 'mlly'
 
 import { createUnplugin } from 'unplugin'
+import { BuildQueue } from './build-queue'
 import { STENCIL_IMPORT } from './constants.js'
 import { getRootDir, getStencilConfigFile, parseTagConfig, transformCompiledCode } from './utils.js'
 
 const DCE_OUTPUT_TARGET_NAME = 'dist-custom-elements'
-const transformedCache = new Map<string, { version: number, code: string }>()
 
 let compiler: CoreCompiler.Compiler | undefined
-let compilerPromise: Promise<void> | undefined
-let latestRequestedVersion = 0
+let buildQueue: BuildQueue | undefined
 
 async function cleanup() {
   await compiler?.destroy()
@@ -28,61 +27,6 @@ async function cleanup() {
 }
 process.on('SIGTERM', cleanup)
 process.on('SIGINT', cleanup)
-
-/**
- * Queue a build so that:
- *   1. Only one build runs at a time
- *   2. Rapid successive calls collapse into a single build
- *
- */
-function queueBuild() {
-  latestRequestedVersion++
-  compilerPromise = (compilerPromise ?? Promise.resolve()).then(async () => {
-    await compiler?.build()
-    transformedCache.clear()
-  })
-  return compilerPromise
-}
-
-/**
- * Ensure that the compiled dist file is at least as new as the corresponding source file before we read it.
- *
- * @param srcPath Absolute path to the component’s **source** file (`.tsx`).
- * @param distPath Absolute path to the compiled **dist** file (`dist-custom-elements/<tag>.js`).
- */
-async function ensureFreshBuild(srcPath: string, distPath: string) {
-  try {
-    const [srcStats, distStats] = await Promise.all([
-      compiler?.sys.stat(srcPath),
-      compiler?.sys.stat(distPath),
-    ])
-
-    if (
-      distStats?.mtimeMs
-      && srcStats?.mtimeMs
-      && distStats.mtimeMs >= srcStats.mtimeMs
-    ) {
-      return
-    }
-  }
-  catch {}
-
-  await queueBuild()
-  await waitForLatestBuild()
-}
-
-/**
- * Waits until the most recent Stencil build chain has completed
- */
-async function waitForLatestBuild(): Promise<void> {
-  while (true) {
-    const pending = compilerPromise
-    if (pending)
-      await pending
-    if (compilerPromise === pending)
-      return
-  }
-}
 
 export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = {}) => {
   const nodeLogger = nodeApi.createNodeLogger()
@@ -122,20 +66,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
         throw new Error(`Could not find "${DCE_OUTPUT_TARGET_NAME}" output target`)
 
       compiler = await createCompiler(validated.config)
-      const watcher = await compiler.createWatcher()
-
-      function onChange() {
-        nodeLogger.info(`[unplugin-stencil] Compiling...`)
-        compilerPromise = new Promise(resolve => compiler?.build().finally(() => resolve()))
-      }
-      watcher.on('fileAdd', onChange)
-      watcher.on('fileDelete', onChange)
-      watcher.on('fileUpdate', onChange)
-
-      /**
-       * trigger compiler once on build start
-       */
-      onChange()
+      buildQueue = new BuildQueue(compiler)
     },
     /**
      * `transformInclude` is called for every file that is being transformed.
@@ -190,9 +121,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
       const componentTag = parseTagConfig(code)
       const compilerFilePath = path.resolve(distCustomElementsOptions.dir, `${componentTag}.js`)
 
-      await ensureFreshBuild(id, compilerFilePath)
-
-      await waitForLatestBuild()
+      await buildQueue?.ensureFreshBuild(id, compilerFilePath)
 
       const exists = await compiler.sys.access(compilerFilePath)
       if (!exists)
@@ -203,7 +132,6 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
         raw,
         compilerFilePath,
       )
-      transformedCache.set(id, { version: latestRequestedVersion, code: transformedCode })
 
       return {
         code: transformedCode,
