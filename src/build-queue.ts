@@ -1,11 +1,13 @@
 import type * as CoreCompiler from '@stencil/core/compiler'
+import { EventEmitter } from 'node:events'
 
-export class BuildQueue {
+export class BuildQueue extends EventEmitter {
   #compiler: CoreCompiler.Compiler
   #isBuilding = false
   #pending = false
 
   constructor(compiler: CoreCompiler.Compiler) {
+    super()
     this.#compiler = compiler
   }
 
@@ -26,8 +28,13 @@ export class BuildQueue {
    */
   async #runBuild() {
     this.#isBuilding = true
+    this.emit('buildStart')
     try {
       await this.#compiler.build()
+    }
+    catch (err) {
+      this.emit('buildError', err)
+      throw err
     }
     finally {
       this.#isBuilding = false
@@ -35,10 +42,13 @@ export class BuildQueue {
         this.#pending = false
         await this.#runBuild()
       }
+      else {
+        this.emit('buildFinished')
+      }
     }
   }
 
-  async ensureFreshBuild(srcPath: string, distPath: string) {
+  async getLatestBuild(srcPath: string, distPath: string) {
     try {
       const [srcStats, distStats] = await Promise.all([
         this.#compiler?.sys.stat(srcPath),
@@ -56,6 +66,11 @@ export class BuildQueue {
     catch {}
 
     this.#queueBuild()
-    while (this.#isBuilding || this.#pending) await new Promise(r => setTimeout(r, 25))
+
+    if (!this.#isBuilding && !this.#pending)
+      return
+
+    await new Promise(resolve => this.once('buildFinished', resolve))
+    return this.#compiler!.sys.readFile(distPath)
   }
 }
