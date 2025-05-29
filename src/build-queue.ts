@@ -1,12 +1,12 @@
-import type * as CoreCompiler from '@stencil/core/compiler'
+import type { Compiler } from '@stencil/core/compiler'
 import { EventEmitter } from 'node:events'
 
 export class BuildQueue extends EventEmitter {
-  #compiler: CoreCompiler.Compiler
+  #compiler: Compiler
   #isBuilding = false
   #pending = false
 
-  constructor(compiler: CoreCompiler.Compiler) {
+  constructor(compiler: Compiler) {
     super()
     this.#compiler = compiler
   }
@@ -48,29 +48,36 @@ export class BuildQueue extends EventEmitter {
     }
   }
 
-  async getLatestBuild(srcPath: string, distPath: string) {
+  async getLatestBuild(srcPath: string, distPath: string): Promise<string> {
     try {
       const [srcStats, distStats] = await Promise.all([
-        this.#compiler?.sys.stat(srcPath),
-        this.#compiler?.sys.stat(distPath),
+        this.#compiler.sys.stat(srcPath),
+        this.#compiler.sys.stat(distPath),
       ])
 
+      /**
+       * If there were no changes to the file we don't need to trigger
+       * a new build.
+       */
       if (
         distStats?.mtimeMs
         && srcStats?.mtimeMs
         && distStats.mtimeMs >= srcStats.mtimeMs
       ) {
-        return
+        return this.#compiler.sys.readFile(distPath)
       }
     }
     catch {}
 
+    /**
+     * trigger a new build and wait for it to finish
+     */
     this.#queueBuild()
-
-    if (!this.#isBuilding && !this.#pending)
-      return
-
     await new Promise(resolve => this.once('buildFinished', resolve))
-    return this.#compiler!.sys.readFile(distPath)
+
+    /**
+     * return the build file
+     */
+    return this.#compiler.sys.readFile(distPath)
   }
 }
