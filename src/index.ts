@@ -11,11 +11,14 @@ import nodeApi from '@stencil/core/sys/node'
 import { findStaticImports, parseStaticImport } from 'mlly'
 
 import { createUnplugin } from 'unplugin'
+import { BuildQueue } from './build-queue'
 import { STENCIL_IMPORT } from './constants.js'
 import { getRootDir, getStencilConfigFile, parseTagConfig, transformCompiledCode } from './utils.js'
 
-let compiler: CoreCompiler.Compiler | undefined
 const DCE_OUTPUT_TARGET_NAME = 'dist-custom-elements'
+
+let compiler: CoreCompiler.Compiler | undefined
+let buildQueue: BuildQueue | undefined
 
 async function cleanup() {
   await compiler?.destroy()
@@ -28,7 +31,6 @@ process.on('SIGINT', cleanup)
 export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = {}) => {
   const nodeLogger = nodeApi.createNodeLogger()
   let distCustomElementsOptions: OutputTargetDistCustomElements | undefined
-  let compilerPromise: Promise<void> | undefined
 
   return {
     name: 'unplugin-stencil',
@@ -64,20 +66,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
         throw new Error(`Could not find "${DCE_OUTPUT_TARGET_NAME}" output target`)
 
       compiler = await createCompiler(validated.config)
-      const watcher = await compiler.createWatcher()
-
-      function onChange() {
-        nodeLogger.info(`[unplugin-stencil] Compiling...`)
-        compilerPromise = new Promise(resolve => compiler?.build().finally(() => resolve()))
-      }
-      watcher.on('fileAdd', onChange)
-      watcher.on('fileDelete', onChange)
-      watcher.on('fileUpdate', onChange)
-
-      /**
-       * trigger compiler once on build start
-       */
-      onChange()
+      buildQueue = new BuildQueue(compiler)
     },
     /**
      * `transformInclude` is called for every file that is being transformed.
@@ -127,22 +116,22 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
        * if file doesn't define a Stencil component
        */
       if (!compiler || !distCustomElementsOptions || !distCustomElementsOptions.dir || (!isStencilComponent && !id.endsWith('.css')))
-        return { code }
-
-      if (compilerPromise) {
-        nodeLogger.info(`[unplugin-stencil] Waiting for compiler to finish...`)
-        await compilerPromise
-      }
+        return
 
       const componentTag = parseTagConfig(code)
       const compilerFilePath = path.resolve(distCustomElementsOptions.dir, `${componentTag}.js`)
-      const compilerFileExists = await compiler.sys.access(compilerFilePath)
 
-      if (!compilerFileExists)
+      const exists = await compiler.sys.access(compilerFilePath)
+      if (!exists)
         throw new Error('Could not find the output file')
 
+      const raw = await buildQueue?.getLatestBuild(id, compilerFilePath)
+
+      if (!raw)
+        return
+
       const transformedCode = await transformCompiledCode(
-        await compiler.sys.readFile(compilerFilePath),
+        raw,
         compilerFilePath,
       )
 
