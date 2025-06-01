@@ -113,10 +113,25 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
       const isStencilComponent = imports.some(imp => 'Component' in (imp.namedImports || {}))
 
       /**
-       * if file doesn't define a Stencil component
+       * don't compile the file if:
        */
-      if (!compiler || !distCustomElementsOptions || !distCustomElementsOptions.dir || (!isStencilComponent && !id.endsWith('.css')))
+      if (
+        /**
+         * something with the setup failed and some of the primitives we need
+         * to compile the file are missing
+         */
+        !compiler || !buildQueue
+        /**
+         * the output directory is not set
+         */
+        || !distCustomElementsOptions || !distCustomElementsOptions.dir
+        /**
+         * the file is not a Stencil component and not a CSS file
+         */
+        || (!isStencilComponent && !id.endsWith('.css'))
+      ) {
         return
+      }
 
       const componentTag = parseTagConfig(code)
       const compilerFilePath = path.resolve(distCustomElementsOptions.dir, `${componentTag}.js`)
@@ -125,11 +140,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
       if (!exists)
         throw new Error('Could not find the output file')
 
-      const raw = await buildQueue?.getLatestBuild(id, compilerFilePath)
-
-      if (!raw)
-        return
-
+      const raw = await buildQueue.getLatestBuild(id, compilerFilePath)
       const transformedCode = await transformCompiledCode(
         raw,
         compilerFilePath,
