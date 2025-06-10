@@ -136,11 +136,12 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
       const componentTag = parseTagConfig(code)
       const compilerFilePath = path.resolve(distCustomElementsOptions.dir, `${componentTag}.js`)
 
+      const raw = await buildQueue.getLatestBuild(id, compilerFilePath)
+
       const exists = await compiler.sys.access(compilerFilePath)
       if (!exists)
         throw new Error('Could not find the output file')
 
-      const raw = await buildQueue.getLatestBuild(id, compilerFilePath)
       const transformedCode = await transformCompiledCode(
         raw,
         compilerFilePath,
