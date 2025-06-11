@@ -173,13 +173,20 @@ export function transformCompiledCode(code: string, outputPath: string) {
      * }
      * ```
      *
-     * the new import will be:
+     * if on a POSIX system, the new import will be:
      *
      * ```js
      * import { f as format } from '/path/to/project/dist/components/utils.js';
      * ```
+     *
+     * or, if on a WIN32 system:
+     *
+     * ```js
+     * import { f as format } from 'C:/path/to/project/dist/components/utils.js';
+     * ```
      */
-    const newImport = imp.code.replace(imp.specifier, path.posix.resolve(outputDir, imp.specifier))
+    const localizedOutputPath = path.resolve(outputDir, imp.specifier)
+    const newImport = imp.code.replace(imp.specifier, localizedOutputPath.split(path.sep).join(path.posix.sep))
     code = code.replace(imp.code, newImport)
   }
 
@@ -249,7 +256,8 @@ export function transformCompiledCode(code: string, outputPath: string) {
      */
     const namedImport = Object.entries(componentImport?.namedImports || {})[0]
     if (namedImport && componentImport) {
-      code += `\nexport { ${namedImport.join(' as ')} } from '${path.posix.resolve(outputDir, componentImport.specifier)}';\n`
+      const localizedOutputPath = path.resolve(outputDir, componentImport.specifier)
+      code += `\nexport { ${namedImport.join(' as ')} } from '${localizedOutputPath.split(path.sep).join(path.posix.sep)}';\n`
     }
   }
 

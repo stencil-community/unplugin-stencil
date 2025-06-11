@@ -1,5 +1,5 @@
-import { describe, expect, it, vi } from 'vitest'
-
+import type path from 'node:path'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { getCompilerOptions, getRootDir, injectStencilImports, parseTagConfig, transformCompiledCode } from '../src/utils'
 
 vi.mock('node:fs/promises', () => ({
@@ -99,19 +99,73 @@ export { defineCustomElement, IonButton }
 `
 
 describe('transformCompiledCode', () => {
-  it('should transform the compiled code', () => {
-    expect(transformCompiledCode(sourceCode, '/foo/bar/loo/test.js')).toMatchInlineSnapshot(`
-      "import { B as Button, d as defineCustomElement$1 } from '/foo/bar/loo/components/button.js';
+  const mockedPlatform: { name: typeof process.platform } = vi.hoisted(() => ({
+    name: 'linux',
+  }))
 
-      import { f as format } from '/foo/bar/loo/utils.js';
+  vi.mock('node:path', async () => {
+    const actual = await vi.importActual<typeof path>('node:path')
 
-      const IonButton = Button
-      const defineCustomElement = defineCustomElement$1
+    const getPlatformPath = () => mockedPlatform.name === 'win32'
+      ? actual.win32
+      : actual.posix
 
-      export { defineCustomElement, IonButton }
+    const obj = {
+      ...actual,
+      dirname: (path: string) => getPlatformPath().dirname(path),
+      resolve: (...paths: string[]) => getPlatformPath().resolve(...paths),
+      get sep() {
+        return getPlatformPath().sep
+      },
+    }
 
-      export { B as Button } from '/foo/bar/loo/components/button.js';
-      "
-    `)
+    return {
+      ...obj,
+      default: obj,
+    }
+  })
+
+  afterEach(() => {
+    vi.resetModules()
+  })
+
+  describe('on a POSIX system', () => {
+    it('should transform the compiled code', () => {
+      mockedPlatform.name = 'linux'
+
+      expect(transformCompiledCode(sourceCode, '/foo/bar/loo/test.js')).toMatchInlineSnapshot(`
+        "import { B as Button, d as defineCustomElement$1 } from '/foo/bar/loo/components/button.js';
+
+        import { f as format } from '/foo/bar/loo/utils.js';
+
+        const IonButton = Button
+        const defineCustomElement = defineCustomElement$1
+
+        export { defineCustomElement, IonButton }
+
+        export { B as Button } from '/foo/bar/loo/components/button.js';
+        "
+      `)
+    })
+  })
+
+  describe('on a WIN32 system', () => {
+    it('should transform the compiled code', () => {
+      mockedPlatform.name = 'win32'
+
+      expect(transformCompiledCode(sourceCode, 'C:\\foo\\bar\\loo\\test.js')).toMatchInlineSnapshot(`
+        "import { B as Button, d as defineCustomElement$1 } from 'C:/foo/bar/loo/components/button.js';
+
+        import { f as format } from 'C:/foo/bar/loo/utils.js';
+
+        const IonButton = Button
+        const defineCustomElement = defineCustomElement$1
+
+        export { defineCustomElement, IonButton }
+
+        export { B as Button } from 'C:/foo/bar/loo/components/button.js';
+        "
+      `)
+    })
   })
 })
