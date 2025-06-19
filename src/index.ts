@@ -29,6 +29,7 @@ process.on('SIGTERM', cleanup)
 process.on('SIGINT', cleanup)
 
 export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = {}) => {
+  const isWatchMode = process.env.NODE_ENV !== 'production' || process.argv.includes('--watch')
   const nodeLogger = nodeApi.createNodeLogger()
   let distCustomElementsOptions: OutputTargetDistCustomElements | undefined
 
@@ -68,8 +69,10 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
       compiler = await createCompiler(validated.config)
       buildQueue = new BuildQueue(compiler)
     },
-    async buildEnd() {
-      process.exit(0)
+    closeBundle() {
+      if (!isWatchMode) {
+        process.exit(0)
+      }
     },
     /**
      * `transformInclude` is called for every file that is being transformed.
