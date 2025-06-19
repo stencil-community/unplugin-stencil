@@ -68,6 +68,10 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
       compiler = await createCompiler(validated.config)
       buildQueue = new BuildQueue(compiler)
     },
+    async buildEnd() {
+      // ensure the process exits when the build is finished
+      process.exit(0)
+    },
     /**
      * `transformInclude` is called for every file that is being transformed.
      * If it returns `true`, the file will be transformed.
