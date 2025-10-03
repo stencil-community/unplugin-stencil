@@ -151,9 +151,18 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
         compilerFilePath,
       )
 
+      const sourcemapFilePath = path.resolve(distCustomElementsOptions.dir, `${componentTag}.js.map`)
+      const rawSourcemap = await buildQueue.getLatestBuild(id, sourcemapFilePath)
+      const sourcemapExists = await compiler.sys.access(sourcemapFilePath)
+
+      const sourcemap = sourcemapExists
+        ? { sourceRoot: getRootDir(options), ...JSON.parse(rawSourcemap) }
+        : undefined;
+
       return {
         code: transformedCode,
         inputFilePath: id,
+        map: sourcemap
       }
     },
   }
