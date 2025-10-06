@@ -157,12 +157,12 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
 
       const sourcemap = sourcemapExists
         ? { sourceRoot: getRootDir(options), ...JSON.parse(rawSourcemap) }
-        : undefined;
+        : undefined
 
       return {
         code: transformedCode,
         inputFilePath: id,
-        map: sourcemap
+        map: sourcemap,
       }
     },
   }

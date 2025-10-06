@@ -1,6 +1,6 @@
-import path from 'node:path';
-import { defineConfig } from 'vitest/config';
-import stencil from './src/vite';
+import path from 'node:path'
+import { defineConfig } from 'vitest/config'
+import stencil from './src/vite'
 
 export default defineConfig({
   test: {
@@ -21,8 +21,8 @@ export default defineConfig({
       {
         plugins: [
           stencil({
-            rootPath: path.join(__dirname, 'playground')
-          })
+            rootPath: path.join(__dirname, 'playground'),
+          }),
         ],
         test: {
           dir: './playground',
@@ -37,4 +37,4 @@ export default defineConfig({
       },
     ],
   },
-});
+})
