@@ -53,5 +53,8 @@ jobs:
       - name: Build
         run: nr build
 
+      - name: Playwright Install
+        run: nlx playwright install --with-deps
+
       - name: Test
         run: nr test
