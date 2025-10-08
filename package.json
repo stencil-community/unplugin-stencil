@@ -135,19 +135,22 @@
     "@nuxt/kit": "^3.17.3",
     "@nuxt/schema": "^3.17.3",
     "@types/node": "^22.15.18",
+    "@vitest/browser": "^3.2.4",
+    "@vitest/coverage-v8": "^3.2.4",
     "bumpp": "^10.1.0",
     "chalk": "^5.4.1",
     "eslint": "^9.26.0",
     "esno": "^4.8.0",
     "fast-glob": "^3.3.3",
     "nodemon": "^3.1.10",
+    "playwright": "^1.55.1",
     "release-it": "^19.0.2",
     "rimraf": "^6.0.1",
     "rollup": "^4.40.2",
     "tsup": "^8.4.0",
     "typescript": "^5.8.3",
     "vite": "^6.3.5",
-    "vitest": "^3.1.3",
+    "vitest": "^3.2.4",
     "webpack": "^5.99.8"
   }
 }
