@@ -54,7 +54,7 @@ jobs:
         run: nr build
 
       - name: Playwright Install
-        run: nlx playwright install chromium-headless-shell --with-deps
+        run: nlx playwright install --with-deps
 
       - name: Test
         run: nr test
