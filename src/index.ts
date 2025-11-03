@@ -69,7 +69,6 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
       buildQueue = new BuildQueue(compiler)
     },
     async writeBundle() {
-      // Use writeBundle instead of buildEnd to ensure all output files
       // (including iframe.html in Storybook builds) are written before exiting
       // writeBundle runs after all files have been written to disk
       process.exit(0)
