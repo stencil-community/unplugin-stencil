@@ -68,7 +68,11 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
       compiler = await createCompiler(validated.config)
       buildQueue = new BuildQueue(compiler)
     },
-
+    async writeBundle() {
+      // (including iframe.html in Storybook builds) are written before exiting
+      // writeBundle runs after all files have been written to disk
+      process.exit(0)
+    },
     /**
      * `transformInclude` is called for every file that is being transformed.
      * If it returns `true`, the file will be transformed.
