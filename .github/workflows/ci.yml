@@ -54,7 +54,14 @@ jobs:
         run: nr build
 
       - name: Playwright Install
-        run: nlx playwright install --with-deps
+        run: nlx playwright install chromium_headless_shell --with-deps
+
+      - name: Verify Playwright install
+        run: |
+          nlx --yes playwright --version || true
+          echo "PLAYWRIGHT_BROWSERS_PATH=$PLAYWRIGHT_BROWSERS_PATH"
+          ls -la ~/.cache/ms-playwright || true
+          find ~/.cache/ms-playwright -type f -name 'headless_shell' -print || true
 
       - name: Test
         run: nr test
