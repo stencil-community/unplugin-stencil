@@ -4,6 +4,7 @@ import stencil from './src/vite'
 
 export default defineConfig({
   test: {
+    watch: false,
     coverage: {
       enabled: true,
       include: [
@@ -30,6 +31,7 @@ export default defineConfig({
           include: ['**/*.spec.{ts,tsx}'],
           browser: {
             enabled: true,
+            headless: true,
             provider: 'playwright',
             instances: [{ browser: 'chromium' }],
           },
