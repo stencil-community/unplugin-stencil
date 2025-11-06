@@ -17,20 +17,12 @@ import { getRootDir, getStencilConfigFile, parseTagConfig, transformCompiledCode
 
 const DCE_OUTPUT_TARGET_NAME = 'dist-custom-elements'
 
-let compiler: CoreCompiler.Compiler | undefined
-let buildQueue: BuildQueue | undefined
-
-async function cleanup() {
-  await compiler?.destroy()
-  compiler = undefined
-  process.exit(1)
-}
-process.on('SIGTERM', cleanup)
-process.on('SIGINT', cleanup)
-
 export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = {}) => {
   const nodeLogger = nodeApi.createNodeLogger()
   let distCustomElementsOptions: OutputTargetDistCustomElements | undefined
+  let compiler: CoreCompiler.Compiler | undefined
+  let buildQueue: BuildQueue | undefined
+  const isTest = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true'
 
   return {
     name: 'unplugin-stencil',
@@ -69,8 +61,18 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
       buildQueue = new BuildQueue(compiler)
     },
     async buildEnd() {
-      // ensure the process exits when the build is finished
-      process.exit(0)
+      // Clean up compiler resources when build ends
+      await compiler?.destroy()
+      compiler = undefined
+      buildQueue = undefined
+
+      // In test mode, force exit after a short delay to allow cleanup
+      // This works around Stencil compiler not fully releasing file handles
+      if (isTest) {
+        setTimeout(() => {
+          process.exit(0)
+        }, 100)
+      }
     },
     /**
      * `transformInclude` is called for every file that is being transformed.
