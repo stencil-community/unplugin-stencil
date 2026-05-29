@@ -1,5 +1,7 @@
 import type { Compiler } from '@stencil/core/compiler'
+import type { CompilerBuildResults } from '@stencil/core/internal'
 import { EventEmitter } from 'node:events'
+import { stencilBuildEvents } from './build-events.js'
 
 export class BuildQueue extends EventEmitter {
   #compiler: Compiler
@@ -29,11 +31,13 @@ export class BuildQueue extends EventEmitter {
   async #runBuild() {
     this.#isBuilding = true
     this.emit('buildStart')
+    let results: CompilerBuildResults | undefined
     try {
-      await this.#compiler.build()
+      results = await this.#compiler.build()
     }
     catch (err) {
       this.emit('buildError', err)
+      stencilBuildEvents.emit('buildError', err)
       throw err
     }
     finally {
@@ -42,8 +46,9 @@ export class BuildQueue extends EventEmitter {
         this.#pending = false
         await this.#runBuild()
       }
-      else {
-        this.emit('buildFinished')
+      else if (results) {
+        this.emit('buildFinished', results)
+        stencilBuildEvents.emit('buildFinished', results)
       }
     }
   }

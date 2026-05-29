@@ -1,5 +1,8 @@
 import type * as CoreCompiler from '@stencil/core/compiler'
-import type { OutputTargetDistCustomElements } from '@stencil/core/internal'
+import type {
+  Config,
+  OutputTargetDistCustomElements,
+} from '@stencil/core/internal'
 
 import type { UnpluginFactory } from 'unplugin'
 import type { Options } from './types.js'
@@ -13,16 +16,31 @@ import { findStaticImports, parseStaticImport } from 'mlly'
 import { createUnplugin } from 'unplugin'
 import { BuildQueue } from './build-queue'
 import { STENCIL_IMPORT } from './constants.js'
-import { getRootDir, getStencilConfigFile, parseTagConfig, transformCompiledCode } from './utils.js'
+import {
+  clearStyleDependencies,
+  rebuildStyleMap,
+  setGlobalStyleFromConfig,
+} from './style-dependencies.js'
+import {
+  getRootDir,
+  getStencilConfigFile,
+  parseTagConfig,
+  transformCompiledCode,
+} from './utils.js'
 
 const DCE_OUTPUT_TARGET_NAME = 'dist-custom-elements'
 
-export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = {}) => {
+export const unpluginFactory: UnpluginFactory<Options | undefined> = (
+  options = {},
+) => {
   const nodeLogger = nodeApi.createNodeLogger()
   let distCustomElementsOptions: OutputTargetDistCustomElements | undefined
   let compiler: CoreCompiler.Compiler | undefined
   let buildQueue: BuildQueue | undefined
-  const isTest = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true'
+  let stencilConfig: Config | undefined
+  let onBuildFinished: (() => void) | undefined
+  const isTest
+    = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true'
 
   return {
     name: 'unplugin-stencil',
@@ -34,7 +52,9 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
       const configPath = await getStencilConfigFile(options)
       const nodeSys = nodeApi.createNodeSys({ process, logger: nodeLogger })
       nodeApi.setupNodeProcess({ process, logger: nodeLogger })
-      const coreCompiler = await nodeSys.dynamicImport!(nodeSys.getCompilerExecutingPath()) as { loadConfig: typeof CoreCompiler.loadConfig }
+      const coreCompiler = (await nodeSys.dynamicImport!(
+        nodeSys.getCompilerExecutingPath(),
+      )) as { loadConfig: typeof CoreCompiler.loadConfig }
       const validated = await coreCompiler.loadConfig({
         config: {
           rootDir: getRootDir(options),
@@ -53,18 +73,39 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
         sys: nodeSys,
       })
 
-      distCustomElementsOptions = validated.config.outputTargets.find(o => o.type === DCE_OUTPUT_TARGET_NAME) as OutputTargetDistCustomElements
-      if (!distCustomElementsOptions)
-        throw new Error(`Could not find "${DCE_OUTPUT_TARGET_NAME}" output target`)
+      distCustomElementsOptions = validated.config.outputTargets.find(
+        o => o.type === DCE_OUTPUT_TARGET_NAME,
+      ) as OutputTargetDistCustomElements
+      if (!distCustomElementsOptions) {
+        throw new Error(
+          `Could not find "${DCE_OUTPUT_TARGET_NAME}" output target`,
+        )
+      }
+
+      stencilConfig = validated.config
+      setGlobalStyleFromConfig(validated.config)
 
       compiler = await createCompiler(validated.config)
       buildQueue = new BuildQueue(compiler)
+
+      onBuildFinished = () => {
+        if (compiler && stencilConfig)
+          void rebuildStyleMap(compiler.sys, stencilConfig)
+      }
+      buildQueue.on('buildFinished', onBuildFinished)
     },
     async buildEnd() {
+      if (buildQueue && onBuildFinished)
+        buildQueue.off('buildFinished', onBuildFinished)
+
+      clearStyleDependencies()
+
       // Clean up compiler resources when build ends
       await compiler?.destroy()
       compiler = undefined
       buildQueue = undefined
+      stencilConfig = undefined
+      onBuildFinished = undefined
 
       // In test mode, force exit after a short delay to allow cleanup
       // This works around Stencil compiler not fully releasing file handles
@@ -116,7 +157,9 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
       const imports = staticImports
         .filter(imp => imp.specifier === STENCIL_IMPORT)
         .map(imp => parseStaticImport(imp))
-      const isStencilComponent = imports.some(imp => 'Component' in (imp.namedImports || {}))
+      const isStencilComponent = imports.some(
+        imp => 'Component' in (imp.namedImports || {}),
+      )
 
       /**
        * don't compile the file if:
@@ -126,11 +169,13 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
          * something with the setup failed and some of the primitives we need
          * to compile the file are missing
          */
-        !compiler || !buildQueue
+        !compiler
+        || !buildQueue
         /**
          * the output directory is not set
          */
-        || !distCustomElementsOptions || !distCustomElementsOptions.dir
+        || !distCustomElementsOptions
+        || !distCustomElementsOptions.dir
         /**
          * the file is not a Stencil component and not a CSS file
          */
@@ -140,7 +185,10 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
       }
 
       const componentTag = parseTagConfig(code)
-      const compilerFilePath = path.resolve(distCustomElementsOptions.dir, `${componentTag}.js`)
+      const compilerFilePath = path.resolve(
+        distCustomElementsOptions.dir,
+        `${componentTag}.js`,
+      )
 
       const raw = await buildQueue.getLatestBuild(id, compilerFilePath)
 
@@ -153,8 +201,14 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
         compilerFilePath,
       )
 
-      const sourcemapFilePath = path.resolve(distCustomElementsOptions.dir, `${componentTag}.js.map`)
-      const rawSourcemap = await buildQueue.getLatestBuild(id, sourcemapFilePath)
+      const sourcemapFilePath = path.resolve(
+        distCustomElementsOptions.dir,
+        `${componentTag}.js.map`,
+      )
+      const rawSourcemap = await buildQueue.getLatestBuild(
+        id,
+        sourcemapFilePath,
+      )
       const sourcemapExists = await compiler.sys.access(sourcemapFilePath)
 
       const sourcemap = sourcemapExists
@@ -171,5 +225,11 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (options = 
 }
 
 export const unplugin = /* #__PURE__ */ createUnplugin(unpluginFactory)
+
+export { stencilBuildEvents } from './build-events.js'
+export {
+  type ComponentStyleDependencies,
+  getComponentStyleDependencies,
+} from './style-dependencies.js'
 
 export default unplugin
