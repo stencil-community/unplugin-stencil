@@ -1,6 +1,6 @@
 # Stencil Unplugin
 
-[![NPM version](https://img.shields.io/npm/v/unplugin-stencil?color=a1b858&label=)](https://www.npmjs.com/package/unplugin-stencil)
+[![NPM version](https://img.shields.io/npm/v/@stencil-community/unplugin-stencil?color=a1b858&label=)](https://www.npmjs.com/package/@stencil-community/unplugin-stencil)
 
 An unplugin that wraps the [Stencil](https://stenciljs.com/) compiler to be used within Astro, Esbuild, Nuxt, Rollup, rspack, Vite and Webpack etc. environments.
 
@@ -9,7 +9,7 @@ An unplugin that wraps the [Stencil](https://stenciljs.com/) compiler to be used
 To install this unplugin, run:
 
 ```bash
-npm i unplugin-stencil
+npm i @stencil-community/unplugin-stencil
 ```
 
 <details>
@@ -17,7 +17,7 @@ npm i unplugin-stencil
 
 ```ts
 // vite.config.ts
-import stencil from 'unplugin-stencil/vite'
+import stencil from '@stencil-community/unplugin-stencil/vite'
 
 export default defineConfig({
   plugins: [
@@ -33,7 +33,7 @@ export default defineConfig({
 
 ```ts
 // rollup.config.js
-import Starter from 'unplugin-stencil/rollup'
+import Starter from '@stencil-community/unplugin-stencil/rollup'
 
 export default {
   plugins: [
@@ -52,7 +52,7 @@ export default {
 module.exports = {
   /* ... */
   plugins: [
-    require('unplugin-stencil/webpack')({ /* options */ })
+    require('@stencil-community/unplugin-stencil/webpack')({ /* options */ })
   ]
 }
 ```
@@ -66,7 +66,7 @@ module.exports = {
 // nuxt.config.js
 export default defineNuxtConfig({
   modules: [
-    ['unplugin-stencil/nuxt', { /* options */ }],
+    ['@stencil-community/unplugin-stencil/nuxt', { /* options */ }],
   ],
 })
 ```
@@ -83,7 +83,7 @@ export default defineNuxtConfig({
 module.exports = {
   configureWebpack: {
     plugins: [
-      require('unplugin-stencil/webpack')({ /* options */ }),
+      require('@stencil-community/unplugin-stencil/webpack')({ /* options */ }),
     ],
   },
 }
@@ -97,7 +97,7 @@ module.exports = {
 ```ts
 // esbuild.config.js
 import { build } from 'esbuild'
-import Starter from 'unplugin-stencil/esbuild'
+import Starter from '@stencil-community/unplugin-stencil/esbuild'
 
 build({
   plugins: [Starter()],
