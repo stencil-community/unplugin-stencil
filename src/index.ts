@@ -43,7 +43,7 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (
     = process.env.NODE_ENV === 'test' || process.env.VITEST === 'true'
 
   return {
-    name: 'unplugin-stencil',
+    name: '@stencil-community/unplugin-stencil',
     enforce: 'pre',
     /**
      * This hook is called when the build starts. It is a good place to initialize

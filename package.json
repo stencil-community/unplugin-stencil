@@ -1,5 +1,5 @@
 {
-  "name": "unplugin-stencil",
+  "name": "@stencil-community/unplugin-stencil",
   "type": "module",
   "version": "0.4.1",
   "packageManager": "pnpm@10.8.1",
