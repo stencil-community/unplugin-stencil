@@ -112,14 +112,69 @@ export class Cmp {}
     ])
 
     const sys = {
+      // `sys.readDir` returns full normalized paths, not basenames.
       readDir: async (dir: string) => {
         if (dir === srcDir)
-          return ['cmp.tsx']
+          return [cmpPath]
         return []
       },
       stat: async (p: string) => ({
         isDirectory: p === srcDir,
         isFile: p === cmpPath,
+        isSymbolicLink: false,
+        size: 0,
+        mtimeMs: 0,
+        ctimeMs: 0,
+        atimeMs: 0,
+      }),
+      readFile: async (p: string) => files.get(p) ?? '',
+    } as unknown as CompilerSystem
+
+    await rebuildStyleMap(sys, { rootDir, srcDir })
+
+    const deps = getComponentStyleDependencies()
+    expect(deps.byComponent.get(path.resolve(cmpPath))).toEqual(
+      new Set([path.resolve(cssPath)]),
+    )
+    expect(deps.byStyle.get(path.resolve(cssPath))).toEqual(
+      new Set([path.resolve(cmpPath)]),
+    )
+  })
+
+  it('recurses into nested dirs using absolute paths from sys.readDir', async () => {
+    clearStyleDependencies()
+
+    const rootDir = path.resolve('/project')
+    const srcDir = path.join(rootDir, 'src')
+    const componentsDir = path.join(srcDir, 'components')
+    const cmpDir = path.join(componentsDir, 'my-cmp')
+    const cmpPath = path.join(cmpDir, 'my-cmp.tsx')
+    const cssPath = path.join(cmpDir, 'my-cmp.css')
+
+    const files = new Map<string, string>([
+      [
+        cmpPath,
+        `
+import { Component } from '@stencil/core'
+@Component({ tag: 'my-cmp', styleUrl: 'my-cmp.css' })
+export class MyCmp {}
+`,
+      ],
+    ])
+
+    // sys.readDir returns full normalized paths at every level.
+    const dirEntries = new Map<string, string[]>([
+      [srcDir, [componentsDir]],
+      [componentsDir, [cmpDir]],
+      [cmpDir, [cmpPath, cssPath]],
+    ])
+    const directories = new Set([srcDir, componentsDir, cmpDir])
+
+    const sys = {
+      readDir: async (dir: string) => dirEntries.get(dir) ?? [],
+      stat: async (p: string) => ({
+        isDirectory: directories.has(p),
+        isFile: !directories.has(p),
         isSymbolicLink: false,
         size: 0,
         mtimeMs: 0,
