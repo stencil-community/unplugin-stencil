@@ -139,4 +139,36 @@ export class Cmp {}
       new Set([path.resolve(cmpPath)]),
     )
   })
+
+  it('seeds globalStyle and an empty graph for a component-less scan', async () => {
+    clearStyleDependencies()
+
+    const rootDir = path.resolve('/project')
+    const srcDir = path.join(rootDir, 'src')
+
+    const sys = {
+      readDir: async () => [],
+      stat: async () => ({
+        isDirectory: false,
+        isFile: false,
+        isSymbolicLink: false,
+        size: 0,
+        mtimeMs: 0,
+        ctimeMs: 0,
+        atimeMs: 0,
+      }),
+      readFile: async () => '',
+    } as unknown as CompilerSystem
+
+    await rebuildStyleMap(sys, {
+      rootDir,
+      srcDir,
+      globalStyle: 'src/global.css',
+    })
+
+    const deps = getComponentStyleDependencies()
+    expect(deps.byComponent.size).toBe(0)
+    expect(deps.byStyle.size).toBe(0)
+    expect(deps.globalStyle).toBe(path.resolve(rootDir, 'src/global.css'))
+  })
 })

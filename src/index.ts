@@ -88,6 +88,12 @@ export const unpluginFactory: UnpluginFactory<Options | undefined> = (
       compiler = await createCompiler(validated.config)
       buildQueue = new BuildQueue(compiler)
 
+      // Seed the style-dependency map before any `transform` short-circuits.
+      // `getLatestBuild` skips building when `dist/` is newer than source (the
+      // common pre-built dev-server case), so `buildFinished` may never fire on
+      // a cold start. Scanning here makes the API correct from the first edit.
+      await rebuildStyleMap(compiler.sys, stencilConfig)
+
       onBuildFinished = () => {
         if (compiler && stencilConfig)
           void rebuildStyleMap(compiler.sys, stencilConfig)
@@ -229,7 +235,9 @@ export const unplugin = /* #__PURE__ */ createUnplugin(unpluginFactory)
 export { stencilBuildEvents } from './build-events.js'
 export {
   type ComponentStyleDependencies,
+  extractStylePathsFromSource,
   getComponentStyleDependencies,
+  rebuildStyleMap,
 } from './style-dependencies.js'
 
 export default unplugin
