@@ -128,7 +128,10 @@ async function collectTsxFiles(
   }
 
   for (const entry of entries) {
-    const fullPath = path.join(dir, entry)
+    // `sys.readDir` returns full normalized paths, not basenames, so use the
+    // entry directly. Re-joining with `dir` would double the path and break
+    // every subsequent `stat`, leaving the dependency map empty.
+    const fullPath = entry
     let stat: { isDirectory: boolean, isFile: boolean } | undefined
     try {
       stat = await sys.stat(fullPath)
